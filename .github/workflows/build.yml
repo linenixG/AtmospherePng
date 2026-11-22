@@ -16,7 +16,7 @@ jobs:
     - name: Compile
       shell: msys2 {0}
       run: |
-        g++ ImageViewer.cpp -o ImageViewer.exe -lgdiplus -lcomdlg32 -lshell32 -lole32 -lgdi32 -luser32 -municode -mwindows
+        g++ ImageViewer.cpp -o ImageViewer.exe -lgdiplus -lcomdlg32 -lshell32 -lole32 -lgdi32 -luser32 -municode -mwindows -static
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
       with:
