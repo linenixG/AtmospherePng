@@ -19,6 +19,7 @@
 #include <string>
 #include <vector>
 #include <algorithm>
+#include <cwctype>
 
 #pragma comment(lib, "gdiplus.lib")
 #pragma comment(lib, "comdlg32.lib")
@@ -26,6 +27,7 @@
 #pragma comment(lib, "ole32.lib")
 
 using namespace Gdiplus;
+using namespace std;
 
 // ---------- Глобальное состояние ----------
 static Image*  g_image      = nullptr;
@@ -47,14 +49,6 @@ static std::wstring GetFileName(const std::wstring& p) {
 static std::wstring GetFolder(const std::wstring& p) {
     size_t pos = p.find_last_of(L"\\/");
     return pos == std::wstring::npos ? L"." : p.substr(0, pos);
-}
-
-static std::wstring GetExeDir() {
-    wchar_t buf[MAX_PATH];
-    GetModuleFileNameW(nullptr, buf, MAX_PATH);
-    std::wstring s(buf);
-    size_t pos = s.find_last_of(L"\\/");
-    return pos == std::wstring::npos ? L"." : s.substr(0, pos);
 }
 
 static std::vector<std::wstring> ListImagesInFolder(const std::wstring& folder) {
@@ -99,7 +93,7 @@ static bool LoadImageFile(HWND hwnd, const std::wstring& path) {
                     L"Ошибка", MB_ICONERROR);
         return false;
     }
-    g_image  = g_bitmap;           // Bitmap наследует Image
+    g_image  = g_bitmap;           
     g_imgW   = g_bitmap->GetWidth();
     g_imgH   = g_bitmap->GetHeight();
     g_path   = path;
@@ -141,7 +135,7 @@ static void ComputeFit(HWND hwnd) {
     float sx = (float)cw / (float)g_imgW;
     float sy = (float)ch / (float)g_imgH;
     g_fitZoom = min(sx, sy);
-    if (g_fitZoom > 1.0f && g_imgW < 400 && g_imgH < 400) g_fitZoom = 1.0f; // не растягиваем мелкие
+    if (g_fitZoom > 1.0f && g_imgW < 400 && g_imgH < 400) g_fitZoom = 1.0f;
 }
 
 static void PaintClient(HWND hwnd) {
@@ -174,7 +168,6 @@ static void PaintClient(HWND hwnd) {
     gfx.SetPixelOffsetMode(PixelOffsetModeHighQuality);
     gfx.DrawImage(g_bitmap, dx, dy, dw, dh);
 
-    // Инфо-строка снизу
     wchar_t info[256];
     swprintf_s(info, L"%ls  ·  %d×%d  ·  %d%%",
                GetFileName(g_path).c_str(), g_imgW, g_imgH, (int)(z * 100));
@@ -215,7 +208,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
         return 0;
 
     case WM_ERASEBKGND:
-        return 1; // фон рисуем в WM_PAINT — без мерцания
+        return 1;
 
     case WM_SIZE:
         InvalidateRect(hwnd, nullptr, FALSE);
@@ -227,7 +220,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
         if (GetKeyState(VK_CONTROL) & 0x8000) {
             g_autoFit = false;
             g_zoom *= (delta > 0 ? 1.15f : 0.87f);
-            g_zoom = max(0.05f, min(g_zoom, 20.0f));
+            g_zoom = min(max(g_zoom, 0.05f), 20.0f);
             InvalidateRect(hwnd, nullptr, FALSE);
         }
         return 0;
@@ -286,14 +279,12 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 
 // ---------- Точка входа ----------
 int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE, LPWSTR lpCmdLine, int nCmdShow) {
-    // GDI+
     GdiplusStartupInput gsi;
     ULONG_PTR token = 0;
     if (GdiplusStartup(&token, &gsi, nullptr) != Ok) return 1;
 
     CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
 
-    // Регистрация класса окна
     WNDCLASSEXW wc = { sizeof(wc) };
     wc.style         = CS_HREDRAW | CS_VREDRAW;
     wc.lpfnWndProc   = WndProc;
@@ -312,14 +303,12 @@ int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE, LPWSTR lpCmdLine, int nCmdShow) 
     ShowWindow(hwnd, nCmdShow);
     UpdateWindow(hwnd);
 
-    // Открыть файл из аргумента или перетащенный на иконку
     int argc = 0;
     LPWSTR* argv = CommandLineToArgvW(GetCommandLineW(), &argc);
     if (argv && argc > 1) {
         LoadImageFile(hwnd, argv[1]);
         LocalFree(argv);
     } else {
-        // если запущено без аргумента — сразу диалог
         std::wstring p;
         if (OpenFileDialog(hwnd, p)) LoadImageFile(hwnd, p);
     }
