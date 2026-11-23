@@ -1,5 +1,4 @@
 name: Build Windows Exe
-
 on: [push, workflow_dispatch]
 
 jobs:
@@ -16,7 +15,7 @@ jobs:
     - name: Compile
       shell: msys2 {0}
       run: |
-        g++ ImageViewer.cpp -o Photmosp.exe -lgdiplus -lcomdlg32 -lshell32 -lole32 -lgdi32 -luser32 -lmfplat -lmfreadwrite -lmfuuid -lshlwapi -municode -mwindows -static
+        g++ ImageViewer.cpp -o Photmosp.exe -lgdiplus -lcomdlg32 -lshell32 -lole32 -lgdi32 -luser32 -lshlwapi -municode -mwindows -static
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
       with:
